@@ -1,6 +1,7 @@
 // src/services/b2Storage.ts
 // Backblaze B2 Cloud Storage integration
 // Handles file uploads, downloads, and URL generation
+// Bucket: philmediabackup (ID: 21d5f8987bbf2479adc091d)
 
 import axios from 'axios';
 
@@ -36,15 +37,31 @@ class B2Storage {
   private apiUrl: string = '';
   private downloadUrl: string = '';
   private bucketId: string = '';
+  private bucketName: string = '';
+  private endpoint: string = '';
   private isAuthenticating: boolean = false;
   private authPromise: Promise<void> | null = null;
 
   constructor() {
     const b2BucketId = import.meta.env.VITE_B2_BUCKET_ID;
+    const b2BucketName = import.meta.env.VITE_B2_BUCKET_NAME;
+    const b2Endpoint = import.meta.env.VITE_B2_ENDPOINT;
+
     if (!b2BucketId) {
       throw new Error('Missing VITE_B2_BUCKET_ID environment variable');
     }
+    if (!b2BucketName) {
+      throw new Error('Missing VITE_B2_BUCKET_NAME environment variable');
+    }
+    if (!b2Endpoint) {
+      throw new Error('Missing VITE_B2_ENDPOINT environment variable');
+    }
+
     this.bucketId = b2BucketId;
+    this.bucketName = b2BucketName;
+    this.endpoint = b2Endpoint;
+
+    console.log('B2Storage - Initialized for bucket:', this.bucketName, 'ID:', this.bucketId);
   }
 
   /**
@@ -174,8 +191,9 @@ class B2Storage {
       const fileId = uploadResponse.data.fileId;
       console.log('B2Storage - File uploaded successfully, fileId:', fileId);
 
-      // Construct public download URL
-      const downloadUrl = `${this.downloadUrl}/file/${this.bucketId}/${encodeURIComponent(filePath)}`;
+      // Construct public download URL using B2 bucket URL
+      // Format: https://f000.backblazeb2.com/file/{bucketName}/{filePath}
+      const downloadUrl = `https://f000.backblazeb2.com/file/${this.bucketName}/${encodeURIComponent(filePath)}`;
 
       return {
         success: true,
@@ -245,6 +263,17 @@ class B2Storage {
    */
   isAuthenticated(): boolean {
     return !!this.authorizationToken && !!this.apiUrl;
+  }
+
+  /**
+   * Get bucket information
+   */
+  getBucketInfo(): { bucketId: string; bucketName: string; endpoint: string } {
+    return {
+      bucketId: this.bucketId,
+      bucketName: this.bucketName,
+      endpoint: this.endpoint,
+    };
   }
 }
 
